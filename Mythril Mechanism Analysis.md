@@ -16,7 +16,7 @@ The process is as shown in the picture below:
 
 ![exec](./structure.png)
 
-#### Command Line
+### Command Line
 
 Command line interface : mythril.interface.cli.py 
 
@@ -37,7 +37,7 @@ report = mythril.fire_lasers(address=address,
 
 The first function is used to load the contract from solidity file. The return value are an array containing contracts and address. The second function passes related parameters to start laser.
 
-#### Mythril.py
+### Mythril.py
 
 Mythril interface: mythril.mythril.py
 
@@ -60,7 +60,7 @@ def fire_lasers(self, strategy, contracts=None, address=None,
 
 Mythril creates an object called ```sym``` for each contract. ```SymExc``` represents symbolic execution. Mythril.py calls a class in symbolic.py and generate an object which is utilized to detect vulnerabilities in the last line.
 
-#### Symbolic.py
+### Symbolic.py
 
 Symbolic interface: mythril.analysis.symbolic.py
 
@@ -93,7 +93,7 @@ self.laser = svm.LaserEVM(self.accounts, dynamic_loader=dynloader, max_depth=max
 
 Then it calls a function called sym_exec to start concolic execution. The return values are nodes and edges which makes up the statespace.
 
-#### LaserEVM
+### LaserEVM
 
 LaserEVM interface: laser.ethereum.svm.py
 
@@ -145,7 +145,7 @@ def sym_exec(self, main_address):
 
 This section will be described in detail in the next section. We can find it's the main process of generating statespace including nodes, edges and others.
 
-#### Detection
+### Detection
 
 Detection interface: mythril.analysis.modules.
 
@@ -155,7 +155,7 @@ It includes many templates such as delegatecall.py and integer.py. These are tem
 
 ## Section II: LaserEVM Analysis
 
-#### Initialize globalstate
+### Initialize globalstate
 
 It starts with symbolic.py calling class LaserEVM to create a laser object. Then it calls a function called sym_exec to start concolic execution. 
 
@@ -225,7 +225,7 @@ The initialization of worldstate was completed at the beginning of the call to c
 
 To this end, the globalstate initialization is finished. Then it starts the execution cycle.
 
-#### Generate nodes and edges
+### Generate nodes and edges
 
 If you have read the paper of Mythril, it's obvious that Laser organizes program states via a control flow graph. Graph consists of edges and nodes. The goal here is to get the states of each instruction in each node after execution.
 
@@ -287,7 +287,7 @@ halt = False
             ...
 ```
 
-#### Jump
+### Jump
 
 The nodes appear as arrays in the laser. The variable called uid starts at 0. Each node has a plus. Edges utilize uid to represent from one node to another. When It meets  some instructions like JUMP, procedure generates a new node and generate an edge, and then set the halt to true, current node's operation is terminated after recursion. 
 
@@ -317,7 +317,7 @@ new_node = self._sym_exec(new_gblState)
 
 Current node's operation is terminated after recursion. In addition, it will also generate an edge. Because "JUMPDEST" instruction is unconditional, fork doesn't exist. So far we have got a completed node and came to the next loop.
 
- #### Fork
+ ### Fork
 
 In some cases, nodes fork to generate two new nodes. For example, when we meet some instructions like JUMPI, nodes will fork because that is conditional JUMP. Besides, there will be two conditional edges. Here we pay attention to the fork part, the processing data will be mentioned in Section III.
 
@@ -360,11 +360,11 @@ new_gblState = LaserEVM.copy_global_state(gblState)
 
 The above two parts are the code to generate two new nodes for condition == true and condition == false respectively. Obviously, this part is highly similar to direct jump instruction besides it has another parameter called constraints and  conditional edge. After fork, there are two loops to process two nodes separately. Finally, we will get two nodes connected to previous node.
 
-#### Return value
+### Return value
 
 When we finish every single instruction, what do we get? As described above, it's clear that we have states related to every instruction. Because of the edges and constraints, we can figure out how we can reach a certain node, however the detailed process is completed by z3 solver which we don't delve into. To this end, we have this statespace that is utilized in detecting vulnerabilities later.  
 
-#### Detect vulnerabilities
+### Detect vulnerabilities
 
 Let's go back to mythril.py in Section I. So far we have finished SymExecWrapper and got the statespace called sym. Then we execute the following code:
 
@@ -454,7 +454,7 @@ During execution, an infinitely expandable byte-array called "memory", the "prog
 
 Now, Let's see how Mythril processes there opcodes.
 
-#### 1.`PUSH1 0`
+### 1.`PUSH1 0`
 
 The instruction at position 0 is PUSH1, which pushes a one-byte value onto the stack and jumps two steps in the code. Thus, we have:
 
@@ -462,7 +462,7 @@ The instruction at position 0 is PUSH1, which pushes a one-byte value onto the s
 PC: 2 STACK: [0] MEM: [], STORAGE: {}
 ```
 
-##### Mythril source code:
+#### Mythril source code:
 
 ```python
 if op.startswith("PUSH"):
@@ -472,7 +472,7 @@ if op.startswith("PUSH"):
 
 Overall Laser finishes this instruction by creating a bit-vector constant and appending it to stack. ```instr['argument'][2:]``` represents the argument of this instruction from position 2 to the end. Since ```PUSH1 0``` has the argument 1/space/0, so the value of this constant is 0. To this end, we push a BitVecval onto the stack.
 
-#### 2.`CALLDATALOAD`
+### 2.`CALLDATALOAD`
 
 The instruction at position 2 is CALLDATALOAD, which pops one value from the stack, loads the 32 bytes of message data starting from that index, and pushes that on to the stack. Recall that the first 32 bytes here encode 54.
 
@@ -480,7 +480,7 @@ The instruction at position 2 is CALLDATALOAD, which pops one value from the sta
 PC: 3 STACK: [54] MEM: [], STORAGE: {}
 ```
 
-##### Mthril source code:
+#### Mthril source code:
 
 ```python
 elif op == 'CALLDATALOAD':
@@ -539,7 +539,7 @@ By the way, BitVec produces a symbolic variable. The first argument to BitVec is
 
 Here comes to the concept of symbolic execution. Since Mythril is a simulation of contract execution, we have no real input to be assigned to the variables such as calldata. So we utilize symbols to replace input data. 
 
-#### 3.`SLOAD`
+### 3.`SLOAD`
 
 SLOAD pops one from the stack and checks if there is a value in storage for the key popped from the stack. If so, it pushes the value into the stack at the current index. Since the contract is used for the first time, the storage is empty and no value is found for the popped key. Therefore, SLOAD pushes zero to the stack.
 
@@ -547,7 +547,7 @@ SLOAD pops one from the stack and checks if there is a value in storage for the 
 PC: 4 STACK: [0] MEM: [], STORAGE: {}
 ```
 
-##### Mythril source code:
+#### Mythril source code:
 
 ```python
 elif op == 'SLOAD':
@@ -570,7 +570,7 @@ elif op == 'SLOAD':
 
 First, we pop the value ```calldata_Contract_name_op0``` we pushed to stack just now. In the first ```try```, because index is a symbol, it will cause except which convert index to a string. In the second ```try```, because index is a string, it will also cause except which creates a symbol named "storage_index" and finally appends it to stack. These is a difference from the implementation of this contract that we didn't push the value of storage or zero to stack because we can't make the predicate if the value poped exists in storage based on symbol.
 
-#### 4.`NOT`
+### 4.`NOT`
 
 NOT pops one value and pushes 1 if the value is zero, else 0
 
@@ -578,7 +578,7 @@ NOT pops one value and pushes 1 if the value is zero, else 0
 PC: 5 STACK: [1] MEM: [], STORAGE: {}
 ```
 
-##### Mythril source code:
+#### Mythril source code:
 
 ```python
 elif op == 'NOT':
@@ -587,7 +587,7 @@ elif op == 'NOT':
 
 ```TT256M1``` is a global variable equal to 2 ** 256 - 1. Now we pop the symbol named storage_index and appends expression ```TTT256M1 - storage_index```.
 
-#### 5.`PUSH1 9`
+### 5.`PUSH1 9`
 
 Just like the first instruction, we push a one-byte value onto stack.
 
@@ -595,7 +595,7 @@ Just like the first instruction, we push a one-byte value onto stack.
 PC: 7 STACK: [1, 9] MEM: [], STORAGE: {}
 ```
 
-#### 6.`JUMPI`
+### 6.`JUMPI`
 
 The JUMPI instruction pops 2 values and jumps to the instruction designated by the first only if the second is nonzero. Here, the second is nonzero, so we jump. If the value in storage index 54 had not been zero, then the second value from top on the stack would have been 0 (due to NOT), so we would not have jumped, and we would have advanced to the STOP instruction which would have led to us stopping execution.
 
@@ -603,7 +603,7 @@ The JUMPI instruction pops 2 values and jumps to the instruction designated by t
 PC: 9 STACK: [] MEM: [], STORAGE: {}
 ```
 
-##### Mythril source code:
+#### Mythril source code:
 
 ```python
 elif op == 'JUMPI':
@@ -676,7 +676,7 @@ elif op == 'JUMPI':
 
 Obviously, the second line `op0, condition = state.stack.pop(), state.stack.pop()` pops two value from stack. op0 is the value we pushed last step, so it equals to 9.  Condition is the value we pushed when we met the instruction SLOAD, it equals to 2 ** 256 - 1 - storage_calldata_Contract_name_op0.
 
-#### 7. Integer template
+### 7. Integer template
 
 The following instructions are similar to those in the previous steps. Now let's see how Mythril uses these symbols in detecting vulnerabilities. We utilize integer overflow as a template.
 
@@ -719,6 +719,6 @@ Several comments represent the main process for this template.  We can clearly s
 
 Next, Mythril construct proper constraints and put them in z3 solver to check satisfiable. Overall, symbols can be used to calculate and generate symbolic expressions that is what z3 needs.
 
-#### Conclusion 
+### Conclusion 
 
 The symbolic execution of LaserEVM is to set some parameters like calldata in the environment to symbols, and the symbol execution maintains a state set {X, Y, Z}. When a variable such as calldata or callvalue is needed, a symbol X0, Y0 is generated. The set maintains {X->X0, Y->Y0, Z}, and X0 and Y0 are used to generate symbol expressions during symbol execution. Either the symbolic variables X0, Y0, or an expression consisting of them can be append to machine.stack. Therefore, in the detection vulnerability process, the data of the stack used can be symbolic variables, and the z3 solver can calculate the expressions consisting of these symbol variables and utilize them to complete detection.
