@@ -1,4 +1,4 @@
-# Mythril Mechanism Analysis
+# Mythril Internals: How Symbolic Execution Works
 
 ### Introduction
 
